@@ -1,0 +1,34 @@
+[project]
+name = "base-mcp"
+version = "0.1.0"
+description = "Bounded filesystem and HTTP tools MCP server for a sandboxed agent"
+requires-python = ">=3.14"
+license = "MIT"
+dependencies = [
+    # The server uses the mcp 2.x API.
+    "mcp[cli]>=2,<3",
+    "httpx",
+    "starlette",
+    "uvicorn",
+
+    # Outlining: one tree-sitter grammar per supported language.
+    "tree-sitter>=0.25,<0.27",
+    "tree-sitter-python",
+    "tree-sitter-javascript",
+    "tree-sitter-typescript",
+    "tree-sitter-go",
+    "tree-sitter-rust",
+    "tree-sitter-java",
+    "tree-sitter-ruby",
+    "tree-sitter-bash",
+    "tree-sitter-yaml",
+    "tree-sitter-markdown",
+    "tree-sitter-sql",
+    "tree-sitter-hcl",
+]
+
+[project.optional-dependencies]
+# Test dependencies.
+dev = [
+    "pytest",
+]
