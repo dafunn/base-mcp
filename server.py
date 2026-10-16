@@ -83,7 +83,13 @@ class ErrorText(str):
 
 
 # -- MCP server wiring ------------------------------------------------
-_server = Server("base-mcp")
+def release_version() -> str:
+    """The release this build reports to clients: BASE_MCP_VERSION,
+    stamped into the image from the base-mcp-v* tag at build time, else `dev`."""
+    return os.environ.get("BASE_MCP_VERSION", "").strip() or "dev"
+
+
+_server = Server("base-mcp", version=release_version())
 
 _PATH_PROP = {"type": "string", "description": "Path, absolute or relative to the first allowed root"}
 

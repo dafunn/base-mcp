@@ -165,6 +165,15 @@ MCP_TRANSPORT=sse \
 .venv/bin/python server.py   # after `uv sync --frozen` (Python 3.14 and uv)
 ```
 
+The server reports its release in the MCP `initialize` result
+(`serverInfo.version`). To stamp it, build from a checkout with tags:
+
+```
+docker build --build-arg BASE_MCP_VERSION=$(git describe --tags --match 'base-mcp-v*' | sed 's/^base-mcp-v//') .
+```
+
+A build without it reports `dev`.
+
 ## As a client's only way out
 
 Put the client on an internal network with only this server, and attach the

@@ -242,3 +242,25 @@ def test_a_file_reading_like_an_error_is_ok_not_refused(tree, caplog):
     assert not result.is_error
     assert "Error: this is just text" in result.content[0].text
     assert _audit_records(caplog)[-1]["outcome"] == "ok"
+
+
+# -- Release version ------------------------------------------------
+
+
+def test_release_version_is_dev_when_unset(monkeypatch):
+    monkeypatch.delenv("BASE_MCP_VERSION", raising=False)
+    assert srv.release_version() == "dev"
+
+
+def test_release_version_is_dev_when_blank(monkeypatch):
+    monkeypatch.setenv("BASE_MCP_VERSION", "  ")
+    assert srv.release_version() == "dev"
+
+
+def test_release_version_reports_the_build_value(monkeypatch):
+    monkeypatch.setenv("BASE_MCP_VERSION", "0.2.0-3-gabc1234")
+    assert srv.release_version() == "0.2.0-3-gabc1234"
+
+
+def test_server_reports_the_release_version():
+    assert srv._server.version == srv.release_version()

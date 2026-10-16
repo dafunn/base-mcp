@@ -14,6 +14,16 @@ RUN UV_PROJECT_ENVIRONMENT=/app/.venv uv sync --frozen --no-install-project
 
 COPY server.py outline.py config.py net.py fs_ops.py content.py ./
 
+# The release version reported to MCP clients, from the build's `git describe`
+# against the base-mcp-v* tags. A build without it reports `dev`.
+# Stamp a release with
+#     --build-arg BASE_MCP_VERSION=$(git describe --tags --match 'base-mcp-v*' | sed 's/^base-mcp-v//')
+ARG BASE_MCP_VERSION=dev
+# The RUN uses the arg so the layer cache keys on it; an ENV alone can be
+# reused across builds with different values and report a stale version.
+RUN printf '%s\n' "${BASE_MCP_VERSION}" > /app/VERSION
+ENV BASE_MCP_VERSION=${BASE_MCP_VERSION}
+
 # Run as a non-root user: the filesystem scope is enforced in the server, and
 # the container's own permissions are the backstop.
 #
