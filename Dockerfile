@@ -1,4 +1,4 @@
-FROM python:3.14-slim
+FROM docker.io/library/python:3.14-slim
 
 COPY --from=ghcr.io/astral-sh/uv:0.12.22@sha256:f513a91fc62fe7c17567eee97230dd198e43edb8a9fbecca843714a4358fe1bc /uv /uvx /bin/
 

@@ -194,3 +194,51 @@ def test_failed_auth_is_audited_without_the_token(auth_token, caplog):
     assert "wrong" not in rec.get("detail", "") and auth_token not in "\n".join(
         r.message for r in caplog.records
     )
+
+
+# -- error results carry isError ----------------------------------------
+
+
+def _call(name, args):
+    from mcp.types import CallToolRequestParams
+
+    return _run(srv.call_tool(None, CallToolRequestParams(name=name, arguments=args)))
+
+
+def test_containment_refusal_is_an_error_result(tree):
+    result = _call("fs_read", {"path": "../outside/secret.txt"})
+    assert result.is_error is True
+    assert result.content[0].text.startswith("Error: ")
+
+
+def test_gate_refusal_is_an_error_result(tree):
+    result = _call("fs_write", {"path": "new.txt", "content": "x"})
+    assert result.is_error is True
+    assert result.content[0].text == "Error: fs_write is disabled (EXPOSE_WRITE=false)"
+
+
+def test_unknown_tool_is_an_error_result(tree):
+    result = _call("fs_nope", {})
+    assert result.is_error is True
+    assert result.content[0].text == "Error: unknown tool 'fs_nope'"
+
+
+def test_unexpected_failure_is_an_error_result(tree, caplog):
+    with caplog.at_level("INFO", logger="base-mcp"):
+        result = _call("fs_read", {})          # missing required argument
+    assert result.is_error is True
+    assert _audit_records(caplog)[-1]["outcome"] == "error"
+
+
+def test_a_normal_read_is_not_an_error(tree):
+    result = _call("fs_read", {"path": "hello.py"})
+    assert not result.is_error
+
+
+def test_a_file_reading_like_an_error_is_ok_not_refused(tree, caplog):
+    (tree / "notes.txt").write_text("Error: this is just text\n")
+    with caplog.at_level("INFO", logger="base-mcp"):
+        result = _call("fs_read", {"path": "notes.txt"})
+    assert not result.is_error
+    assert "Error: this is just text" in result.content[0].text
+    assert _audit_records(caplog)[-1]["outcome"] == "ok"

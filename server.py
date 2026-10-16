@@ -73,6 +73,15 @@ def _bearer_ok(header_value: str, expected: str) -> bool:
 
 
 
+# -- Error results ----------------------------------------------------
+
+
+class ErrorText(str):
+    """A tool result that reports a failure. call_tool sends it with isError set,
+    so a client can tell it from output (a file read can itself start with
+    "Error:")."""
+
+
 # -- MCP server wiring ------------------------------------------------
 _server = Server("base-mcp")
 
@@ -224,20 +233,22 @@ async def call_tool(_ctx: Any, params: CallToolRequestParams) -> CallToolResult:
         # A handler that had to cut returns structured content alongside the text.
         if isinstance(result, tuple):
             result, structured = result
-        # A refusal from the gate comes back as text rather than an exception,
-        # so it is classified here to keep both refusal paths in one log field.
-        outcome = "refused" if result.startswith("Error:") else "ok"
+        # A refusal from the gate comes back as ErrorText rather than an
+        # exception, so it is classified here to keep both refusal paths in one
+        # log field.
+        outcome = "refused" if isinstance(result, ErrorText) else "ok"
         detail = result[:200] if outcome == "refused" else ""
     except ValueError as exc:  # every containment and policy check raises this
-        result = f"Error: {exc}"
+        result = ErrorText(f"Error: {exc}")
         outcome, detail = "refused", str(exc)
     except Exception as exc:  # noqa: BLE001 - surface as a tool error, don't crash the server
-        result = f"Error: {exc}"
+        result = ErrorText(f"Error: {exc}")
         outcome, detail = "error", str(exc)
     _audit(params.name, args, outcome, (time.perf_counter() - started) * 1000, detail)
     return CallToolResult(
         content=[TextContent(type="text", text=result)],
         structured_content=structured,
+        is_error=isinstance(result, ErrorText),
     )
 
 
@@ -251,7 +262,7 @@ async def _dispatch(name: str, a: dict) -> str | tuple[str, dict]:
     # Gate by name before dispatch: a client that cached or guessed the name is
     # refused here.
     if name in _WRITE_TOOL_NAMES and not config.EXPOSE_WRITE:
-        return f"Error: {name} is disabled (EXPOSE_WRITE=false)"
+        return ErrorText(f"Error: {name} is disabled (EXPOSE_WRITE=false)")
     if name == "fs_roots":
         return _h_fs_roots()
     if name == "fs_list":
@@ -290,7 +301,7 @@ async def _dispatch(name: str, a: dict) -> str | tuple[str, dict]:
             a["url"], a.get("method", "GET"), a.get("headers") or {},
             a.get("body", ""), int(a.get("max_bytes", 0)),
         )
-    return f"Error: unknown tool '{name}'"
+    return ErrorText(f"Error: unknown tool '{name}'")
 
 
 # -- Entry point ------------------------------------------------------
